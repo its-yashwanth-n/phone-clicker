@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Phone Clicker</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='8' y='2' width='16' height='28' rx='4' fill='%234f7cff'/%3E%3Cpath d='M14 11l5 5-5 5' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div id="conn" class="conn">
+      <span class="dot"></span><span id="conn-text">Connecting…</span>
+    </div>
+    <button id="timer" class="chip timer" title="Tap: start/pause · Double-tap: reset">00:00</button>
+    <button id="open-settings" class="icon-btn" aria-label="Settings">
+      <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <!-- Slides -->
+    <section id="tab-slides" class="tab active">
+      <div class="select-wrap">
+        <select id="profile" aria-label="App you are presenting with">
+          <option value="powerpoint">PowerPoint (app)</option>
+          <option value="powerpoint_web">PowerPoint (web)</option>
+          <option value="google_slides">Google Slides</option>
+          <option value="keynote" data-mac-only>Keynote</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <button data-action="start" class="soft">▶ Start</button>
+        <button data-action="start_here" id="start-here" class="soft">From here</button>
+        <button data-action="end_show" id="end-show" class="soft danger">■ End</button>
+      </div>
+
+      <button id="slide-info" class="slide-info" aria-label="Slide number, tap to adjust">
+        <div class="slide-line">
+          <span id="slide-kind" class="slide-kind">Slide</span>
+          <span id="slide-num" class="slide-num">1</span>
+          <span id="slide-total" class="slide-total"></span>
+          <span id="slide-badge" class="badge">TAP TO SET</span>
+        </div>
+        <div class="progress"><div id="progress-bar"></div></div>
+      </button>
+
+      <button id="next" class="next" aria-label="Next">
+        <span class="big">NEXT</span>
+        <span id="next-hint" class="hint">tap · swipe ← next · swipe → back</span>
+      </button>
+
+      <button data-action="prev" class="prev">‹ Previous</button>
+
+      <div class="row" id="slide-extras">
+        <button data-action="black" class="soft small">Black</button>
+        <button data-action="white" class="soft small">White</button>
+        <button data-action="first" class="soft small">First</button>
+        <button data-action="last" class="soft small">Last</button>
+      </div>
+      <div class="row hidden" id="pdf-extras">
+        <button data-action="zoom_out" class="soft small">−</button>
+        <button data-action="zoom_reset" class="soft small">100%</button>
+        <button data-action="zoom_in" class="soft small">+</button>
+        <button data-action="fullscreen" class="soft small">Full screen</button>
+      </div>
+    </section>
+
+    <!-- Touchpad -->
+    <section id="tab-touchpad" class="tab">
+      <div id="pad" class="pad">
+        <svg viewBox="0 0 24 24" class="pad-icon"><path d="M5 3l14 8-6 1.5L10 19 5 3Z"/></svg>
+        <span>Drag to move · Tap to click<br>Two fingers to scroll · Two-finger tap to right-click</span>
+      </div>
+      <div class="row">
+        <button id="left-click" class="soft">Left click</button>
+        <button id="right-click" class="soft">Right click</button>
+      </div>
+    </section>
+
+    <!-- Media -->
+    <section id="tab-media" class="tab scroll">
+      <h3 class="group-title">Playback</h3>
+      <div class="grid">
+        <button data-action="media_prev" class="soft">⏮</button>
+        <button data-action="play_pause" class="accent">⏯</button>
+        <button data-action="media_next" class="soft">⏭</button>
+        <button data-action="volume_down" class="soft">🔉</button>
+        <button data-action="mute" class="soft">🔇</button>
+        <button data-action="volume_up" class="soft">🔊</button>
+      </div>
+      <h3 class="group-title">Window</h3>
+      <div class="grid">
+        <button data-action="space" class="soft small">Space</button>
+        <button data-action="fullscreen" class="soft small">Full screen</button>
+        <button data-action="switch_app" class="soft small">Switch app</button>
+        <button data-action="zoom_out" class="soft small">Zoom −</button>
+        <button data-action="zoom_reset" class="soft small">Zoom 0</button>
+        <button data-action="zoom_in" class="soft small">Zoom +</button>
+      </div>
+      <h3 class="group-title">Navigate</h3>
+      <div class="grid">
+        <button data-action="page_up" class="soft small">Page ↑</button>
+        <button data-action="up" class="soft small">↑</button>
+        <button data-action="page_down" class="soft small">Page ↓</button>
+        <button data-action="prev" class="soft small">←</button>
+        <button data-action="down" class="soft small">↓</button>
+        <button data-action="next" class="soft small">→</button>
+      </div>
+    </section>
+
+    <!-- Keyboard -->
+    <section id="tab-keyboard" class="tab">
+      <textarea id="text" rows="5" placeholder="Type here, then tap Send to type it on the laptop"></textarea>
+      <button id="send-text" class="accent">Send to laptop</button>
+      <div class="row">
+        <button data-action="enter" class="soft small">Enter</button>
+        <button data-action="backspace" class="soft small">⌫</button>
+        <button data-action="tab" class="soft small">Tab</button>
+        <button data-action="end_show" class="soft small">Esc</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs">
+    <button data-tab="slides" class="active">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8"/></svg>Slides
+    </button>
+    <button data-tab="touchpad">
+      <svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v4"/></svg>Touchpad
+    </button>
+    <button data-tab="media">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7L8 5Z"/></svg>Media
+    </button>
+    <button data-tab="keyboard">
+      <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>Keyboard
+    </button>
+  </nav>
+
+  <!-- Slide number dialog -->
+  <dialog id="slide-dialog" class="sheet">
+    <form method="dialog">
+      <h2>Slide number</h2>
+      <p id="slide-dialog-note" class="note">
+        The phone counts your taps on Next and Previous. Animations count as taps too, so correct the number here if it drifts.
+      </p>
+      <label class="field">Current
+        <div class="stepper">
+          <button type="button" data-step="-1" class="soft">−</button>
+          <input id="set-current" type="number" min="1" inputmode="numeric">
+          <button type="button" data-step="1" class="soft">+</button>
+        </div>
+      </label>
+      <label class="field">Total (optional)
+        <input id="set-total" type="number" min="0" inputmode="numeric" placeholder="e.g. 20">
+      </label>
+      <div class="row">
+        <button type="button" id="slide-reset" class="soft">Reset to 1</button>
+        <button value="ok" class="accent">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Settings dialog -->
+  <dialog id="settings-dialog" class="sheet">
+    <form method="dialog">
+      <div class="sheet-head">
+        <h2>Settings</h2>
+        <button value="close" class="icon-btn" aria-label="Close">✕</button>
+      </div>
+
+      <h3 class="group-title">Appearance</h3>
+      <div class="setting">
+        <span>Theme</span>
+        <div class="segmented" data-setting="theme">
+          <button type="button" data-value="auto">Auto</button>
+          <button type="button" data-value="dark">Dark</button>
+          <button type="button" data-value="light">Light</button>
+        </div>
+      </div>
+      <div class="setting">
+        <span>Accent color</span>
+        <div class="swatches" data-setting="accent">
+          <button type="button" data-value="blue" style="--sw:#4f7cff" aria-label="Blue"></button>
+          <button type="button" data-value="purple" style="--sw:#9b6bff" aria-label="Purple"></button>
+          <button type="button" data-value="green" style="--sw:#22b573" aria-label="Green"></button>
+          <button type="button" data-value="orange" style="--sw:#ff8a3d" aria-label="Orange"></button>
+          <button type="button" data-value="pink" style="--sw:#ff4f9a" aria-label="Pink"></button>
+        </div>
+      </div>
+      <div class="setting">
+        <span>NEXT button size</span>
+        <div class="segmented" data-setting="nextSize">
+          <button type="button" data-value="small">S</button>
+          <button type="button" data-value="medium">M</button>
+          <button type="button" data-value="large">L</button>
+        </div>
+      </div>
+
+      <h3 class="group-title">Controls</h3>
+      <label class="setting"><span>Vibrate on tap</span><input type="checkbox" class="switch" data-setting="haptics"></label>
+      <label class="setting"><span>Swipe on NEXT button</span><input type="checkbox" class="switch" data-setting="swipe"></label>
+      <label class="setting"><span>Ask before ending slideshow</span><input type="checkbox" class="switch" data-setting="confirmEnd"></label>
+      <label class="setting"><span>Show slide counter</span><input type="checkbox" class="switch" data-setting="showCounter"></label>
+      <label class="setting"><span>Show Black / White / First / Last</span><input type="checkbox" class="switch" data-setting="showExtras"></label>
+
+      <h3 class="group-title">Timer</h3>
+      <label class="setting"><span>Show timer</span><input type="checkbox" class="switch" data-setting="showTimer"></label>
+      <label class="setting">
+        <span>Talk length <small>(minutes, 0 = off)</small></span>
+        <input type="number" min="0" max="600" inputmode="numeric" class="num" data-setting="timerTarget">
+      </label>
+      <p class="note">With a talk length set, the timer counts down. It turns orange in the last 2 minutes, then turns red and counts your overtime, and the phone buzzes when time is up.</p>
+
+      <h3 class="group-title">Touchpad</h3>
+      <label class="setting slider-row"><span>Pointer speed</span><input type="range" min="0.5" max="4" step="0.1" data-setting="padSpeed"></label>
+      <label class="setting slider-row"><span>Scroll speed</span><input type="range" min="0.5" max="3" step="0.1" data-setting="scrollSpeed"></label>
+      <label class="setting"><span>Natural scrolling</span><input type="checkbox" class="switch" data-setting="naturalScroll"></label>
+
+      <h3 class="group-title">About</h3>
+      <p class="note" id="about-text">Phone Clicker</p>
+      <button type="button" id="reset-settings" class="soft danger wide">Reset all settings</button>
+    </form>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
