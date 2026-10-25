@@ -9,7 +9,7 @@
  └──────────────┘                           └──────────────────┘
 ```
 
-You run a small program on your laptop. It shows a QR code, you scan it with your phone, and your phone's browser becomes the remote.
+You install a small app on your laptop. It shows a QR code, you scan it with your phone, and your phone's browser becomes the remote.
 
 <p align="center">
   <img src="docs/screenshots/slides.png" width="200" alt="Slides tab">
@@ -30,6 +30,7 @@ You run a small program on your laptop. It shows a QR code, you scan it with you
 - [Using it](#-using-it)
 - [Troubleshooting](#-troubleshooting)
 - [How it works](#-how-it-works)
+- [Running from source](#-running-from-source)
 
 ---
 
@@ -52,90 +53,65 @@ You run a small program on your laptop. It shows a QR code, you scan it with you
 
 ## 📋 Requirements
 
-- A **laptop** running Windows 10/11, macOS or Linux (X11)
-- **Python 3.9 or newer** on the laptop
+- A **laptop** running Windows 10/11 (64-bit), macOS 12+ on Apple Silicon, or Linux (X11)
 - A **phone** with a web browser and a camera to scan the QR code
 - The phone and laptop on the **same Wi-Fi network** (a phone hotspot works too)
+
+You **don't need Python** or anything else. The app comes with everything built in.
 
 ---
 
 ## 📥 Installation
 
-You only do this once.
+Download the file for your laptop from the **[latest release](https://github.com/its-yashwanth-n/phone-clicker/releases/latest)**:
 
-### Step 1: Install Python
+| Laptop | Download | What it is |
+|---|---|---|
+| 🪟 **Windows** | `PhoneClicker-Setup-x.y.z.exe` | Installer (recommended) |
+| 🪟 Windows, no install | `PhoneClicker-x.y.z-windows-portable.zip` | Unzip and run `PhoneClicker.exe`, e.g. from a USB stick |
+| 🍎 **Mac** (M1/M2/M3/M4) | `PhoneClicker-x.y.z-macos-apple-silicon.dmg` | Drag-to-Applications disk image |
+| 🐧 **Linux** | `PhoneClicker-x.y.z-linux-x64.tar.gz` | Unpack and run `PhoneClicker/PhoneClicker` |
 
-Check whether you already have it. Open a terminal (on Windows, Command Prompt or PowerShell) and run:
+### 🪟 Windows
 
-```bash
-python --version
-```
+1. Run **`PhoneClicker-Setup-x.y.z.exe`**.
+2. Windows may show **"Windows protected your PC"**. That's because the app isn't code-signed yet. Click **More info → Run anyway**.
+3. Click through the installer. It doesn't need admin rights, and you can tick **Create a desktop shortcut**.
 
-If it prints `Python 3.9` or higher, skip to Step 2. If not:
+To uninstall, go to **Settings → Apps → Installed apps → Phone Clicker → Uninstall**.
 
-- **Windows**: download Python from [python.org/downloads](https://www.python.org/downloads/). When the installer opens, **tick "Add python.exe to PATH"** before you click Install.
-- **macOS**: download it from [python.org/downloads](https://www.python.org/downloads/), or run `brew install python` if you use Homebrew.
-- **Linux**: it's usually already installed. Otherwise run `sudo apt install python3 python3-venv`.
+### 🍎 Mac
 
-### Step 2: Download Phone Clicker
+1. Open the **`.dmg`** and drag **Phone Clicker** into **Applications**.
+2. The first time you open it, macOS says it "can't be opened" because the app isn't notarized. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. On older macOS versions, right-click the app and choose **Open** instead.
+3. Allow it to press keys: in **System Settings → Privacy & Security → Accessibility**, turn on **Phone Clicker**.
 
-**Option A, with Git:**
+To uninstall, drag Phone Clicker from Applications to the Bin.
 
-```bash
-git clone https://github.com/YOUR-USERNAME/phone-clicker.git
-```
-
-**Option B, without Git:** on the GitHub page, click the green **Code** button, choose **Download ZIP**, and unzip the folder somewhere easy to find, such as your Desktop.
-
-### Step 3: First-time setup
-
-The start scripts set everything up automatically the first time you run them, so you can go straight to [Running it](#-running-it).
-
-<details>
-<summary><b>Prefer to set it up manually?</b></summary>
+### 🐧 Linux
 
 ```bash
-cd phone-clicker
-python -m venv .venv
-
-# Windows
-.venv\Scripts\pip install -r requirements.txt
-
-# macOS / Linux
-.venv/bin/pip install -r requirements.txt
+tar -xzf PhoneClicker-*-linux-x64.tar.gz
+./PhoneClicker/PhoneClicker
 ```
 
-</details>
+You need an **X11** session. Wayland blocks programs from pressing keys.
+
+> 💻 Intel Mac, or want to run the Python code yourself? See [Running from source](#-running-from-source).
 
 ---
 
 ## ▶️ Running it
 
-### Windows
+Open **Phone Clicker** from the Start menu, your desktop shortcut, or the Applications folder.
 
-Double-click **`start.bat`** in the `phone-clicker` folder.
+> **The first time on Windows, the firewall asks about Phone Clicker. Tick "Private networks" and click Allow.** If you skip this, your phone won't be able to connect.
 
-> The first run takes about a minute while it installs. After that it starts instantly.
->
-> **Windows Firewall will pop up and ask about Python. Tick "Private networks" and click Allow.** If you skip this, your phone won't be able to connect.
-
-### macOS / Linux
-
-Open a terminal in the `phone-clicker` folder and run:
-
-```bash
-./start.sh
-```
-
-If you get "permission denied", run `chmod +x start.sh` once and try again.
-
-> **macOS:** the first time, go to **System Settings → Privacy & Security → Accessibility** and turn on the app you launched it from (Terminal, iTerm or VS Code). Without this, macOS blocks the key presses.
-
-### What you'll see
-
-A browser tab opens on your laptop with a big QR code. The same QR code and a link are also printed in the terminal:
+A browser tab opens on your laptop with a big QR code. On Windows and Linux, a console window also opens with the same QR code:
 
 ```
+Phone Clicker 1.0.0
+
 Scan this with your phone (same Wi-Fi as this laptop):
 
   █▀▀▀▀▀█ ▄▀▄ █▀▀▀▀▀█
@@ -143,17 +119,14 @@ Scan this with your phone (same Wi-Fi as this laptop):
   ...
 
 Or open: http://192.168.0.8:8765/?t=Ab3xYz9Qk
-Press Ctrl+C to stop.
+Close this window to stop.
 ```
 
-**Keep this window open** while you present. To stop Phone Clicker, close it or press `Ctrl+C`.
+**To stop it:**
+- **Windows / Linux:** close the console window.
+- **Any laptop:** click **Stop Phone Clicker** on the QR page.
 
-### Options
-
-```bash
-python server.py --port 9000      # use a different port
-python server.py --no-browser     # don't open the QR page on the laptop
-```
+If you open Phone Clicker again while it's already running, it just shows the QR page again.
 
 ---
 
@@ -231,7 +204,7 @@ For PDFs, NEXT and Previous use **Page Down / Page Up**, which works in every PD
 
 - Make sure the phone and laptop are on the **same Wi-Fi**. Turn off mobile data on the phone to be sure.
 - **Guest, hotel, school and office Wi-Fi** often block devices from talking to each other. Instead, turn on your **phone's hotspot** and connect the laptop to it.
-- **Windows Firewall:** open *Windows Security → Firewall & network protection → Allow an app through firewall*, find **Python**, and tick **Private**. Also check that your Wi-Fi is set to *Private* rather than *Public* in Windows network settings.
+- **Windows Firewall:** open *Windows Security → Firewall & network protection → Allow an app through firewall*, find **Phone Clicker** (or **Python** if you run from source), and tick **Private**. Also check that your Wi-Fi is set to *Private* rather than *Public* in Windows network settings.
 - Make sure the Phone Clicker window is still open on the laptop.
 
 </details>
@@ -241,7 +214,7 @@ For PDFs, NEXT and Previous use **Page Down / Page Up**, which works in every PD
 
 - Click on your presentation window so it's active. Key presses go to the active window.
 - Check that you picked the right app in the dropdown.
-- **macOS:** grant Accessibility permission (see [Running it](#-running-it)).
+- **macOS:** turn on **Phone Clicker** in *System Settings → Privacy & Security → Accessibility*.
 - **Linux:** Phone Clicker needs an **X11** session. Wayland blocks programs from sending key presses. Choose "Ubuntu on Xorg" (or similar) on the login screen.
 
 </details>
@@ -261,7 +234,7 @@ Browsers only let pages keep the screen awake over HTTPS, so raise your phone's 
 </details>
 
 <details>
-<summary><b>"python is not recognized" on Windows</b></summary>
+<summary><b>"python is not recognized" on Windows (running from source)</b></summary>
 
 Python wasn't added to PATH. Run the Python installer again, choose **Modify**, and tick **"Add Python to environment variables"**. Or reinstall it and tick **"Add python.exe to PATH"**.
 
@@ -270,7 +243,7 @@ Python wasn't added to PATH. Run the Python installer again, choose **Modify**, 
 <details>
 <summary><b>Port already in use</b></summary>
 
-Another program is using port 8765. Run `python server.py --port 9000` (or any other free port).
+Another program is using port 8765. Close it, or if you're running from source, use `python server.py --port 9000`.
 
 </details>
 
@@ -289,8 +262,66 @@ Phone browser ──WebSocket over Wi-Fi──▶ server.py ──pynput──�
 | `static/connect.html` | The QR code page shown on the laptop |
 | `start.bat` / `start.sh` | One-click launchers that set things up on the first run |
 | `docs/` | The PDF user guide and screenshots |
+| `packaging/` | App icon, PyInstaller build recipe and the Windows installer script |
+| `.github/workflows/release.yml` | Builds the installers for every release |
 
 **Security:** each time it starts, Phone Clicker creates a random secret token and puts it in the QR link. The laptop ignores any connection without that token. The QR page itself only opens on the laptop. Everything stays on your local network, and nothing goes to the internet.
+
+---
+
+## 🧑‍💻 Running from source
+
+For developers, or Intel Macs. You'll need [Python 3.9+](https://www.python.org/downloads/). On Windows, tick **"Add python.exe to PATH"** in the installer.
+
+```bash
+git clone https://github.com/its-yashwanth-n/phone-clicker.git
+cd phone-clicker
+```
+
+Then double-click **`start.bat`** (Windows) or run **`./start.sh`** (macOS/Linux). The first run sets up a virtual environment and installs the dependencies.
+
+On macOS, give your terminal app Accessibility permission (see the Mac section above).
+
+Options:
+
+```bash
+python server.py --port 9000      # use a different port
+python server.py --no-browser     # don't open the QR page on the laptop
+python server.py --version
+```
+
+### Building the app and installers
+
+```bash
+pip install -r requirements.txt -r requirements-build.txt
+pyinstaller --noconfirm packaging/phone-clicker.spec
+```
+
+This creates `dist/PhoneClicker/` (Windows/Linux) or `dist/Phone Clicker.app` (macOS), with Python bundled inside. You can only build for the operating system you're on.
+
+**Windows installer:** install [Inno Setup 6](https://jrsoftware.org/isinfo.php), then run:
+
+```bash
+iscc /DAppVersion=1.0.0 packaging\windows\installer.iss
+```
+
+**Icon:** `python packaging/make_icon.py` redraws `packaging/icon.png` and `icon.ico`.
+
+### Publishing a release
+
+Every build is automated with GitHub Actions (`.github/workflows/release.yml`):
+
+1. Bump `__version__` in `server.py`.
+2. Commit, then tag and push the version:
+
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+3. GitHub builds the Windows installer and portable zip, the Mac `.dmg` and the Linux `.tar.gz`, then publishes them on the Releases page.
+
+You can also run the workflow by hand from the **Actions** tab to test a build without releasing it.
 
 ---
 

@@ -9,6 +9,7 @@ import argparse
 import asyncio
 import io
 import json
+import os
 import secrets
 import socket
 import sys
@@ -30,7 +31,11 @@ try:  # Windows only: lets us read the current slide straight from PowerPoint.
 except ImportError:
     win32com = None
 
-STATIC_DIR = Path(__file__).parent / "static"
+__version__ = "1.0.0"
+
+# When packaged with PyInstaller, bundled files are unpacked to sys._MEIPASS.
+BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
+STATIC_DIR = BASE_DIR / "static"
 IS_MAC = sys.platform == "darwin"
 CMD = Key.cmd if IS_MAC else Key.ctrl
 
@@ -200,6 +205,16 @@ async def connect_page(request):
     )
 
 
+async def quit_app(request):
+    # The "Stop" button on the laptop's QR page. Needed for the packaged Mac app,
+    # which has no terminal window to close.
+    if not is_local(request):
+        raise web.HTTPForbidden()
+    print("Stopped from the QR page.")
+    asyncio.get_running_loop().call_later(0.3, os._exit, 0)
+    return web.Response(text="stopped")
+
+
 async def websocket(request):
     if not secrets.compare_digest(request.query.get("t", ""), request.app["token"]):
         raise web.HTTPForbidden()
@@ -234,11 +249,35 @@ async def read_messages(ws):
             print(f"Ignored message {msg.data!r}: {exc}")
 
 
+def port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("0.0.0.0", port))
+            return False
+        except OSError:
+            return True
+
+
 def main():
+    # Packaged apps without a console (the Mac .app) have no stdout to print to.
+    if sys.stdout is None:
+        sys.stdout = sys.stderr = open(os.devnull, "w")
+
     parser = argparse.ArgumentParser(description="Use your phone as a presentation clicker.")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true", help="don't open the QR page on the laptop")
+    parser.add_argument("--version", action="version", version=f"Phone Clicker {__version__}")
     args = parser.parse_args()
+
+    if sys.platform == "win32":
+        import ctypes
+        ctypes.windll.kernel32.SetConsoleTitleW("Phone Clicker")
+
+    # Launched a second time (e.g. from the Start menu): just show the running one's QR page.
+    if port_in_use(args.port):
+        print(f"Phone Clicker is already running on port {args.port}. Opening its QR page.")
+        webbrowser.open(f"http://localhost:{args.port}/connect")
+        return
 
     token = secrets.token_urlsafe(8)
     phone_url = f"http://{get_lan_ip()}:{args.port}/?t={token}"
@@ -252,6 +291,7 @@ def main():
         web.get("/", index),
         web.get("/connect", connect_page),
         web.get("/ws", websocket),
+        web.post("/quit", quit_app),
         web.static("/static", STATIC_DIR),
     ])
 
@@ -261,6 +301,7 @@ def main():
 
     qr = qrcode.QRCode(border=1)
     qr.add_data(phone_url)
+    print(f"\nPhone Clicker {__version__}")
     print("\nScan this with your phone (same Wi-Fi as this laptop):\n")
     qr.print_ascii(invert=True)
     print(f"\nOr open: {phone_url}\n")
@@ -282,7 +323,8 @@ def main():
 
         app.on_startup.append(start_watcher)
         app.on_cleanup.append(stop_watcher)
-    web.run_app(app, host="0.0.0.0", port=args.port, print=lambda *_: print("Press Ctrl+C to stop.\n"))
+
+    web.run_app(app, host="0.0.0.0", port=args.port, print=lambda *_: print("Close this window to stop.\n"))
 
 
 if __name__ == "__main__":
