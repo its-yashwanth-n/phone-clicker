@@ -4,8 +4,8 @@
 
 ```
  ┌──────────────┐        same Wi-Fi         ┌──────────────────┐
- │    Phone     │------------------------>  │    Laptop        |
- │  (browser)   │   tap NEXT → → →          │  PowerPoint, PDF │
+ │    Phone     │   --------------------->  │    Laptop        |
+ │  (browser)   │      tap NEXT → → →       │  PowerPoint, PDF │
  └──────────────┘                           └──────────────────┘
 ```
 
