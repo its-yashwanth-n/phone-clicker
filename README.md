@@ -29,6 +29,7 @@ You install a small app on your laptop. It shows a QR code, you scan it with you
 - [Running it](#-running-it)
 - [Using it](#-using-it)
 - [Troubleshooting](#-troubleshooting)
+- [Security and passcode](#-security-and-passcode)
 - [How it works](#-how-it-works)
 - [Running from source](#-running-from-source)
 
@@ -46,7 +47,7 @@ You install a small app on your laptop. It shows a QR code, you scan it with you
 | 🎵 **Media keys** | Play/pause, next and previous track, volume, mute, full screen |
 | ⌨️ **Keyboard** | Type on your phone and the text appears on the laptop |
 | ⚙️ **Settings** | Dark or light theme, accent colors, NEXT button size, vibration, swipe, timer and touchpad speed |
-| 🔒 **Private** | Each run creates a new secret link, so others on the Wi-Fi can't control your laptop |
+| 🔒 **Secure** | 4–8 digit passcode, lockout after wrong tries, and the QR code hides itself while a projector is connected |
 | 📲 **No phone app** | Works in any phone browser (Chrome, Safari, Firefox, Samsung Internet) |
 
 ---
@@ -107,20 +108,17 @@ Open **Phone Clicker** from the Start menu, your desktop shortcut, or the Applic
 
 > **The first time on Windows, the firewall asks about Phone Clicker. Tick "Private networks" and click Allow.** If you skip this, your phone won't be able to connect.
 
-A browser tab opens on your laptop with a big QR code. On Windows and Linux, a console window also opens with the same QR code:
+A page opens in your browser on the laptop.
 
-```
-Phone Clicker 1.0.0
+### First time: create a passcode
 
-Scan this with your phone (same Wi-Fi as this laptop):
+<p align="center">
+  <img src="docs/screenshots/laptop-setup.png" width="360" alt="Create a passcode on the laptop">
+</p>
 
-  █▀▀▀▀▀█ ▄▀▄ █▀▀▀▀▀█
-  █ ███ █ ▀█▄ █ ███ █
-  ...
+The first time, you choose a **4–8 digit passcode**. Phones have to type it before they can control your laptop. You can **only set it on the laptop**, never from a phone. After that, the page shows the QR code.
 
-Or open: http://192.168.0.8:8765/?t=Ab3xYz9Qk
-Close this window to stop.
-```
+On Windows and Linux, a small console window also opens. It only shows a status message, never the QR code, because that window could end up on a projector.
 
 **To stop it:**
 - **Windows / Linux:** close the console window.
@@ -135,10 +133,55 @@ If you open Phone Clicker again while it's already running, it just shows the QR
 ### Connect your phone
 
 1. Open your phone's **camera** and point it at the QR code.
-2. Tap the link that pops up. The remote opens in your browser.
-3. Check that the **dot in the top-left corner is green**. That means you're connected.
+2. Tap the link that pops up.
+3. **Type your passcode** on the keypad and tap ✓.
+4. Check that the **dot in the top-left corner is green**. That means you're connected.
 
-> 💡 **Tip:** the link changes every time you restart Phone Clicker, so scan the QR code again after a restart.
+> 💡 **Tip:** the link changes every time you restart Phone Clicker, so scan the QR code again after a restart. While the app keeps running, refreshing the page or locking your phone won't ask for the passcode again.
+
+---
+
+## 🔒 Security and passcode
+
+Phone Clicker can press keys on your laptop, so it's locked down:
+
+| Protection | What it does |
+|---|---|
+| 🔢 **Passcode** | Every phone must enter your 4–8 digit passcode before it can do anything. Easy codes like `1234` or `0000` are refused |
+| 💻 **Set on the laptop only** | You can only create or change the passcode on the laptop's own page. Phones and other websites are blocked from it. Changing it needs the current passcode, and logs out every connected phone |
+| 🚫 **Lockout** | After 5 wrong tries, that phone is locked out for 30 seconds, then 1 min, 2 min... up to 15 min. 20 wrong tries from anywhere locks everyone out for 5 minutes |
+| 🤐 **Passcode never sent** | The phone proves it knows the passcode with [SRP](https://datatracker.ietf.org/doc/html/rfc5054), a challenge-response protocol. The passcode never crosses the Wi-Fi, and recorded traffic can't be used to guess it offline. Every guess has to go to the laptop, where the lockout applies |
+| 🔁 **No replays** | Each login and reconnect answers a fresh random challenge, so a recorded message is useless later. The reconnect key is worked out on both sides and never transmitted |
+| 🔗 **Secret link** | The QR link contains a 192-bit random token that changes on every start. The phone removes it from the address bar after it opens |
+| 🧂 **Passcode not stored** | Only an SRP verifier (derived with salted PBKDF2-SHA256) is saved in your user settings folder. The digits themselves are never saved |
+
+> ⚠️ **Limits:** after you unlock, button presses travel unencrypted. Someone on the same Wi-Fi could see *which* buttons you press, but can't take control or learn your passcode. A skilled attacker who actively intercepts traffic on the network (a "man in the middle") could still interfere. Use your own Wi-Fi or your phone's hotspot for important talks.
+
+### Projector and second-screen safety
+
+When you present, your laptop screen may be mirrored to a projector. Phone Clicker watches for that:
+
+<p align="center">
+  <img src="docs/screenshots/laptop-setup-warning.png" width="300" alt="Warning when another screen is connected">
+  <img src="docs/screenshots/laptop-qr-hidden.png" width="300" alt="QR code hidden after a phone connects">
+</p>
+
+- **Another screen detected:** when a projector, TV or monitor is plugged in, the page shows a warning. The passcode form stays hidden until you click *"No one else can see my screen — continue"*.
+- **QR code hidden:** the QR code is blurred while another screen is connected, and as soon as a phone connects. Click **Show QR code** to reveal it. It hides itself again after a minute.
+- **Passcode is never shown:** it's typed into masked fields on the laptop, and shows only as dots on the phone.
+- **Nothing in the console:** the console window never shows the QR code or link.
+
+> 💡 Best practice: switch your display to **Extend** instead of **Duplicate** (<kbd>Win</kbd>+<kbd>P</kbd> on Windows, *System Settings → Displays* on Mac). Keep the Phone Clicker page on your laptop screen.
+
+### Forgot your passcode?
+
+Close Phone Clicker and delete its settings file. Next time you start it, you'll be asked to create a new passcode:
+
+| Laptop | Settings file |
+|---|---|
+| Windows | `%APPDATA%\PhoneClicker\config.json` |
+| Mac | `~/Library/Application Support/PhoneClicker/config.json` |
+| Linux | `~/.config/phone-clicker/config.json` |
 
 ### Give a presentation
 
@@ -259,13 +302,13 @@ Phone browser ──WebSocket over Wi-Fi──▶ server.py ──pynput──�
 |---|---|
 | `server.py` | Web and WebSocket server ([aiohttp](https://docs.aiohttp.org)) that turns button presses into key presses and mouse movement ([pynput](https://pynput.readthedocs.io)). On Windows it also reads the current slide from PowerPoint ([pywin32](https://github.com/mhammond/pywin32)) |
 | `static/index.html`, `app.js`, `style.css` | The phone remote |
-| `static/connect.html` | The QR code page shown on the laptop |
+| `static/connect.html` | The laptop page: passcode setup, QR code and second-screen warnings |
 | `start.bat` / `start.sh` | One-click launchers that set things up on the first run |
 | `docs/` | The PDF user guide and screenshots |
 | `packaging/` | App icon, PyInstaller build recipe and the Windows installer script |
 | `.github/workflows/release.yml` | Builds the installers for every release |
 
-**Security:** each time it starts, Phone Clicker creates a random secret token and puts it in the QR link. The laptop ignores any connection without that token. The QR page itself only opens on the laptop. Everything stays on your local network, and nothing goes to the internet.
+**Security:** see [Security and passcode](#-security-and-passcode). Everything stays on your local network, and nothing goes to the internet.
 
 ---
 

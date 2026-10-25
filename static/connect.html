@@ -6,51 +6,332 @@
   <title>Phone Clicker</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='8' y='2' width='16' height='28' rx='4' fill='%234f7cff'/%3E%3Cpath d='M14 11l5 5-5 5' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
   <style>
+    :root { --bg: #0f1115; --card: #191c23; --line: #2a2f3b; --text: #eef0f5; --muted: #8b92a3; --accent: #4f7cff; --ok: #3ccf7a; --warn: #ffb020; --bad: #ff5a5a; }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #111318;
-      color: #eef0f4;
+      background: var(--bg);
+      color: var(--text);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      padding: 24px 16px;
     }
-    .card { text-align: center; max-width: 520px; padding: 24px; }
-    .qr { background: #fff; padding: 20px; border-radius: 20px; display: inline-block; }
-    .qr svg { width: 300px; height: 300px; display: block; }
-    code { display: block; margin-top: 16px; color: #8a90a0; word-break: break-all; }
-    ol { text-align: left; color: #c5c9d3; line-height: 1.7; }
-    button {
-      margin-top: 8px;
-      background: transparent;
-      color: #ff5a5a;
-      border: 1px solid #3a2a2e;
+    .card { width: 100%; max-width: 480px; text-align: center; }
+    h1 { margin: 0 0 6px; font-size: 26px; }
+    .sub { color: var(--muted); margin: 0 0 22px; line-height: 1.5; }
+    .hidden { display: none !important; }
+
+    .qr-wrap { position: relative; display: inline-block; }
+    .qr { background: #fff; padding: 18px; border-radius: 20px; display: inline-block; transition: filter 200ms ease; }
+    .qr svg { width: 280px; height: 280px; display: block; }
+    .qr.blurred { filter: blur(18px); }
+    .qr-cover {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      color: #111; font-weight: 600;
+    }
+    code { display: block; margin-top: 14px; color: var(--muted); word-break: break-all; font-size: 13px; transition: filter 200ms ease; }
+    code.blurred { filter: blur(6px); user-select: none; }
+
+    ol { text-align: left; color: #c5c9d3; line-height: 1.7; padding-left: 22px; }
+    .status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+    .status.on .dot { background: var(--ok); }
+
+    form { text-align: left; }
+    label { display: block; font-size: 14px; color: var(--muted); margin: 14px 0 6px; }
+    input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--line);
       border-radius: 12px;
-      padding: 10px 18px;
-      font: inherit;
-      cursor: pointer;
+      padding: 14px;
+      font-size: 22px;
+      letter-spacing: 8px;
+      color: var(--text);
+      text-align: center;
+      font-family: inherit;
     }
-    button:hover { background: #2a1d21; }
+    input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .error { color: var(--bad); font-size: 14px; min-height: 20px; margin: 10px 0 0; text-align: center; }
+
+    button {
+      font: inherit; font-weight: 600; cursor: pointer;
+      border-radius: 12px; padding: 12px 18px; border: 1px solid var(--line);
+      background: var(--card); color: var(--text);
+    }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; width: 100%; margin-top: 18px; padding: 14px; }
+    button.link { background: transparent; border: 0; color: var(--muted); padding: 8px; text-decoration: underline; }
+    button.danger { color: var(--bad); background: transparent; }
+    .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+
+    .warning {
+      text-align: left;
+      background: rgba(255, 176, 32, 0.1);
+      border: 1px solid rgba(255, 176, 32, 0.45);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .warning b { color: var(--warn); }
+    .warning button { margin-top: 10px; }
+    .tips { color: var(--muted); font-size: 13px; line-height: 1.6; text-align: left; margin-top: 16px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Scan with your phone</h1>
-    <div class="qr">{{QR}}</div>
-    <code>{{URL}}</code>
-    <ol>
-      <li>Phone and laptop must be on the same Wi-Fi.</li>
-      <li>Open your presentation or PDF and click on it so it has focus.</li>
-      <li>Pick the app on your phone, tap <b>Start</b>, then tap <b>NEXT</b>.</li>
-    </ol>
-    <button id="stop">Stop Phone Clicker</button>
+
+    <!-- Shown while another screen (projector, TV, monitor) is connected -->
+    <div id="screen-warning" class="warning hidden">
+      <b>⚠ Another screen is connected.</b>
+      If this laptop is plugged into a projector or TV, people watching it could see this page.
+      Move this window to your laptop screen, or switch the display to <i>Extend</i> instead of <i>Duplicate</i>
+      (<kbd>Win</kbd>+<kbd>P</kbd> on Windows).
+    </div>
+
+    <!-- 1. First run: create a passcode -->
+    <section id="view-setup" class="hidden">
+      <h1>Create a passcode</h1>
+      <p class="sub">Phones will need this 4–8 digit passcode before they can control this laptop. You can only set it here, on the laptop.</p>
+      <div id="setup-gate" class="hidden">
+        <button id="setup-gate-btn" class="primary">No one else can see my screen — continue</button>
+      </div>
+      <form id="setup-form" autocomplete="off">
+        <label for="new-code">New passcode</label>
+        <input id="new-code" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" required>
+        <label for="new-code-2">Type it again</label>
+        <input id="new-code-2" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" required>
+        <p id="setup-error" class="error"></p>
+        <button class="primary">Save passcode</button>
+        <div class="tips">
+          • Use 6–8 digits for better security.<br>
+          • Avoid easy ones like 1234, 0000 or your birthday.<br>
+          • The passcode is never saved or sent over Wi-Fi. Phones prove they know it without revealing it.
+        </div>
+      </form>
+    </section>
+
+    <!-- 2. Normal: show the QR code -->
+    <section id="view-qr" class="hidden">
+      <h1>Scan with your phone</h1>
+      <div id="status" class="status"><span class="dot"></span><span id="status-text">No phone connected</span></div>
+      <div>
+        <div class="qr-wrap">
+          <div id="qr" class="qr"></div>
+          <div id="qr-cover" class="qr-cover hidden">
+            <span id="qr-cover-text">QR code hidden</span>
+            <button id="reveal">Show QR code</button>
+          </div>
+        </div>
+      </div>
+      <code id="url"></code>
+      <ol>
+        <li>Phone and laptop must be on the same Wi-Fi.</li>
+        <li>Scan the code, then <b>type your passcode</b> on the phone.</li>
+        <li>Open your presentation and click on it so it has focus.</li>
+        <li>Pick the app on your phone, tap <b>Start</b>, then tap <b>NEXT</b>.</li>
+      </ol>
+      <div class="actions">
+        <button id="hide-qr">Hide QR code</button>
+        <button id="change">Change passcode</button>
+        <button id="stop" class="danger">Stop Phone Clicker</button>
+      </div>
+    </section>
+
+    <!-- 3. Change passcode -->
+    <section id="view-change" class="hidden">
+      <h1>Change passcode</h1>
+      <p class="sub">Phones that are connected now will need to enter the new passcode.</p>
+      <div id="change-gate" class="hidden">
+        <button id="change-gate-btn" class="primary">No one else can see my screen — continue</button>
+      </div>
+      <form id="change-form" autocomplete="off">
+        <label for="cur-code">Current passcode</label>
+        <input id="cur-code" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password" required>
+        <label for="chg-code">New passcode</label>
+        <input id="chg-code" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" required>
+        <label for="chg-code-2">Type it again</label>
+        <input id="chg-code-2" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" required>
+        <p id="change-error" class="error"></p>
+        <button class="primary">Save new passcode</button>
+      </form>
+      <div class="actions"><button id="cancel-change" class="link">Cancel</button></div>
+    </section>
+
+    <section id="view-stopped" class="hidden">
+      <h1>Phone Clicker stopped</h1>
+      <p class="sub">You can close this tab.</p>
+    </section>
+
+    <section id="view-error" class="hidden">
+      <h1 id="error-title">Can't reach Phone Clicker</h1>
+      <p id="error-text" class="sub"></p>
+    </section>
   </div>
+
   <script>
-    document.getElementById("stop").addEventListener("click", async () => {
+    const $ = (id) => document.getElementById(id);
+    const views = ["setup", "qr", "change", "stopped", "error"];
+    let status = null;
+    let view = null;
+    let qrLoaded = false;
+    let qrRevealed = false;
+    let revealTimer = null;
+    let lastPhones = 0;
+
+    function show(name) {
+      view = name;
+      views.forEach((v) => $(`view-${v}`).classList.toggle("hidden", v !== name));
+    }
+
+    // A projector or TV counts as a second screen, whether mirrored or extended.
+    function externalScreen() {
+      return (status && status.displays > 1) || window.screen.isExtended === true;
+    }
+
+    async function api(path, options) {
+      const res = await fetch(path, options);
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, data };
+    }
+
+    function showError(title, text) {
+      if (view === "stopped") return;
+      $("error-title").textContent = title;
+      $("error-text").textContent = text;
+      show("error");
+      $("screen-warning").classList.add("hidden");
+    }
+
+    async function refresh() {
+      const res = await fetch("/api/status").catch(() => null);
+      if (!res) {
+        return showError("Can't reach Phone Clicker", "It may have been closed. Start Phone Clicker again; this page will update by itself.");
+      }
+      if (res.status === 404) {
+        // The page files are newer than the app that's running (e.g. after an update).
+        return showError("Please restart Phone Clicker", "Phone Clicker was updated while it was running. Close its window, open it again, then reload this page.");
+      }
+      if (!res.ok) {
+        return showError("Something went wrong", `Phone Clicker answered with error ${res.status}. Try restarting it.`);
+      }
+      if (view === "error") view = null;
+      status = await res.json();
+      const external = externalScreen();
+      $("screen-warning").classList.toggle("hidden", !external || view === "stopped");
+
+      if (!status.passcodeSet) {
+        if (view !== "setup") { show("setup"); gate("setup", external); }
+        return;
+      }
+      if (view === "setup" || view === null) show("qr");
+      if (view === "qr") await updateQr(external);
+    }
+
+    // While another screen is connected, forms stay hidden until you confirm nobody can see them.
+    function gate(name, external) {
+      $(`${name}-gate`).classList.toggle("hidden", !external);
+      $(`${name}-form`).classList.toggle("hidden", external);
+      if (!external) $(name === "setup" ? "new-code" : "cur-code").focus();
+    }
+    $("setup-gate-btn").onclick = () => { $("setup-gate").classList.add("hidden"); $("setup-form").classList.remove("hidden"); $("new-code").focus(); };
+    $("change-gate-btn").onclick = () => { $("change-gate").classList.add("hidden"); $("change-form").classList.remove("hidden"); $("cur-code").focus(); };
+
+    async function updateQr(external) {
+      if (!qrLoaded) {
+        const res = await api("/api/qr");
+        if (!res.ok) return;
+        $("qr").innerHTML = res.data.svg;
+        $("url").textContent = res.data.url;
+        qrLoaded = true;
+      }
+      const phones = status.phones;
+      $("status").classList.toggle("on", phones > 0);
+      $("status-text").textContent = phones ? `${phones} phone${phones > 1 ? "s" : ""} connected` : "No phone connected";
+      // Hide the QR again once a phone has connected - it isn't needed any more.
+      if (phones > lastPhones) hideQr();
+      lastPhones = phones;
+
+      const hidden = !qrRevealed && (external || phones > 0 || manualHide);
+      $("qr").classList.toggle("blurred", hidden);
+      $("url").classList.toggle("blurred", hidden);
+      $("qr-cover").classList.toggle("hidden", !hidden);
+      $("hide-qr").classList.toggle("hidden", hidden);
+      $("qr-cover-text").textContent = external
+        ? "Hidden because another screen is connected"
+        : phones > 0 ? "Hidden — a phone is connected" : "QR code hidden";
+    }
+
+    let manualHide = false;
+    function hideQr() {
+      qrRevealed = false;
+      clearTimeout(revealTimer);
+    }
+    $("reveal").onclick = () => {
+      manualHide = false;
+      qrRevealed = true;
+      clearTimeout(revealTimer);
+      revealTimer = setTimeout(() => { hideQr(); refresh(); }, 60000); // re-hide after a minute
+      refresh();
+    };
+    $("hide-qr").onclick = () => { manualHide = true; hideQr(); refresh(); };
+
+    function validate(a, b) {
+      if (!/^\d{4,8}$/.test(a)) return "Use 4 to 8 digits (numbers only).";
+      if (a !== b) return "The two passcodes don't match.";
+      if (/^(\d)\1+$/.test(a) || "0123456789".includes(a) || "9876543210".includes(a)) {
+        return "That passcode is too easy to guess. Try something less obvious.";
+      }
+      return "";
+    }
+
+    // Clear an old error as soon as you start fixing it.
+    $("setup-form").oninput = () => { $("setup-error").textContent = ""; };
+    $("change-form").oninput = () => { $("change-error").textContent = ""; };
+
+    $("setup-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const a = $("new-code").value, b = $("new-code-2").value;
+      const err = validate(a, b);
+      $("setup-error").textContent = err;
+      if (err) return;
+      const res = await api("/api/passcode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ passcode: a }) });
+      if (!res.ok) { $("setup-error").textContent = res.data.error || "Couldn't save the passcode."; return; }
+      $("setup-form").reset();
+      show("qr");
+      refresh();
+    };
+
+    $("change").onclick = () => { show("change"); gate("change", externalScreen()); };
+    $("cancel-change").onclick = () => { $("change-form").reset(); $("change-error").textContent = ""; show("qr"); refresh(); };
+    $("change-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const a = $("chg-code").value, b = $("chg-code-2").value;
+      const err = validate(a, b);
+      $("change-error").textContent = err;
+      if (err) return;
+      const res = await api("/api/passcode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ passcode: a, current: $("cur-code").value }) });
+      if (!res.ok) { $("change-error").textContent = res.data.error || "Couldn't save the passcode."; return; }
+      $("change-form").reset();
+      $("change-error").textContent = "";
+      show("qr");
+      refresh();
+    };
+
+    $("stop").onclick = async () => {
       await fetch("/quit", { method: "POST" }).catch(() => {});
-      document.querySelector(".card").innerHTML = "<h1>Phone Clicker stopped</h1><p>You can close this tab.</p>";
-    });
+      clearInterval(poll);
+      show("stopped");
+      $("screen-warning").classList.add("hidden");
+    };
+
+    refresh();
+    const poll = setInterval(refresh, 2000);
   </script>
 </body>
 </html>

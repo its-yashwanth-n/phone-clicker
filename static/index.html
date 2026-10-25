@@ -142,6 +142,26 @@
     </button>
   </nav>
 
+  <!-- Passcode lock: covers the remote until the laptop accepts the passcode -->
+  <section id="lock" class="lock">
+    <div class="lock-inner">
+      <div class="lock-icon">
+        <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </div>
+      <h2 id="lock-title">Connecting…</h2>
+      <p id="lock-msg" class="lock-msg">Looking for your laptop.</p>
+      <div id="dots" class="dots" aria-hidden="true"></div>
+      <div id="keypad" class="keypad hidden">
+        <button data-digit="1">1</button><button data-digit="2">2</button><button data-digit="3">3</button>
+        <button data-digit="4">4</button><button data-digit="5">5</button><button data-digit="6">6</button>
+        <button data-digit="7">7</button><button data-digit="8">8</button><button data-digit="9">9</button>
+        <button id="key-del" class="key-fn" aria-label="Delete">⌫</button>
+        <button data-digit="0">0</button>
+        <button id="key-ok" class="key-ok" aria-label="Unlock" disabled>✓</button>
+      </div>
+    </div>
+  </section>
+
   <!-- Slide number dialog -->
   <dialog id="slide-dialog" class="sheet">
     <form method="dialog">
@@ -228,6 +248,7 @@
     </form>
   </dialog>
 
+  <script src="/static/srp.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

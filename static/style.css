@@ -276,6 +276,59 @@ textarea {
 }
 .tabs button.active { background: var(--accent-soft); color: var(--accent); }
 
+/* ---------- Passcode lock ---------- */
+
+.lock {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+  background: var(--bg);
+}
+.lock.unlocked { display: none; }
+.lock-inner { width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.lock-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+.lock-icon svg { width: 30px; height: 30px; }
+.lock h2 { margin: 0 0 6px; font-size: 22px; }
+.lock-msg { margin: 0; min-height: 44px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.lock-msg.error { color: var(--bad); }
+
+.dots { display: flex; gap: 14px; height: 18px; margin: 14px 0 26px; }
+.dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); }
+.dots span.filled { background: var(--text); border-color: var(--text); }
+.dots.shake { animation: shake 400ms; }
+@keyframes shake {
+  20%, 60% { transform: translateX(-10px); }
+  40%, 80% { transform: translateX(10px); }
+}
+
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 100%; }
+.keypad button {
+  aspect-ratio: 1.35;
+  font-size: 26px;
+  font-weight: 500;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.keypad button:active { background: var(--surface-2); }
+.keypad .key-fn { background: transparent; border-color: transparent; font-size: 22px; }
+.keypad .key-ok { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.keypad .key-ok:disabled { opacity: 0.35; }
+.keypad.disabled { opacity: 0.35; pointer-events: none; }
+
 /* ---------- Dialogs ---------- */
 
 dialog.sheet {

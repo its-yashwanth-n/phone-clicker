@@ -2,8 +2,23 @@
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
-const token = new URLSearchParams(location.search).get("t") || "";
 const profileSelect = $("#profile");
+
+// Take the access token out of the address bar so it doesn't show up in screenshots or
+// history. It's kept in sessionStorage so refreshing the page still works.
+const token = (() => {
+  const fromUrl = new URLSearchParams(location.search).get("t");
+  try {
+    if (fromUrl) {
+      sessionStorage.setItem("token", fromUrl);
+      history.replaceState(null, "", location.pathname);
+      return fromUrl;
+    }
+    return sessionStorage.getItem("token") || "";
+  } catch {
+    return fromUrl || "";
+  }
+})();
 
 function load(key, fallback) {
   try { return { ...fallback, ...JSON.parse(localStorage.getItem(key)) }; } catch { return { ...fallback }; }
@@ -103,6 +118,7 @@ $("#open-settings").addEventListener("click", () => {
 let ws;
 let platform = "pc";
 let liveSlides = false;
+let authed = false;
 
 function setConnected(on) {
   $("#conn").classList.toggle("on", on);
@@ -110,16 +126,62 @@ function setConnected(on) {
   document.body.classList.toggle("offline", !on);
 }
 
+// After the first unlock, the phone and laptop both derive a device key from the login (it is
+// never sent). Reconnecting (refresh, screen lock, Wi-Fi blip) signs a fresh nonce with it
+// instead of asking for the passcode again. It only works until the laptop app restarts.
+function savedDevice() {
+  try {
+    const d = JSON.parse(localStorage.getItem("device"));
+    return d && d.token === token && d.id && d.key ? d : null;
+  } catch { return null; }
+}
+function saveDevice(device) {
+  try { localStorage.setItem("device", JSON.stringify(device ? { token, ...device } : null)); } catch {}
+}
+
+// The latest challenge from the laptop: SRP values for a passcode attempt plus a nonce.
+let challenge = null;
+let pendingDeviceKey = null;
+
 function connect() {
   ws = new WebSocket(`ws://${location.host}/ws?t=${encodeURIComponent(token)}`);
-  ws.onopen = () => setConnected(true);
-  ws.onclose = () => {
+  ws.onclose = (event) => {
+    authed = false;
     setConnected(false);
-    setTimeout(connect, 1000);
+    if (event.code === 4001) {
+      saveDevice(null);
+      lock.show("enter", "The passcode was changed on the laptop. Enter the new one.");
+    } else if (!savedDevice() && lock.state !== "setup") {
+      lock.show("connecting");
+    }
+    setTimeout(connect, lock.state === "setup" ? 3000 : 1000);
   };
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
-    if (msg.type === "hello") {
+    if (msg.B) challenge = msg; // every retry message carries a fresh challenge
+    if (msg.type === "challenge") {
+      const device = savedDevice();
+      if (device) {
+        const proof = PhoneClickerCrypto.deviceProof(device.key, msg.nonce);
+        ws.send(JSON.stringify({ type: "auth", device: device.id, proof }));
+      } else if (lock.state !== "locked") {
+        lock.show("enter");
+      }
+    } else if (msg.type === "auth_required") {
+      saveDevice(null);
+      if (lock.state !== "locked") lock.show("enter");
+    } else if (msg.type === "auth_ok") {
+      authed = true;
+      if (pendingDeviceKey) saveDevice({ id: msg.device, key: pendingDeviceKey });
+      pendingDeviceKey = null;
+      lock.hide();
+    } else if (msg.type === "auth_fail") {
+      lock.wrong(msg.remaining);
+    } else if (msg.type === "locked") {
+      lock.lockout(msg.seconds);
+    } else if (msg.type === "setup_required") {
+      lock.show("setup");
+    } else if (msg.type === "hello") {
       platform = msg.platform;
       liveSlides = msg.liveSlides;
       if (platform !== "mac") $$("[data-mac-only]").forEach((el) => el.remove());
@@ -138,8 +200,115 @@ function connect() {
 }
 
 function send(msg) {
-  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  if (authed && ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
 }
+
+// ---------- Passcode lock screen ----------
+
+const lock = {
+  el: $("#lock"),
+  state: "connecting",
+  code: "",
+  countdown: null,
+
+  show(state, message) {
+    this.state = state;
+    this.el.classList.remove("unlocked");
+    clearInterval(this.countdown);
+    const texts = {
+      connecting: ["Connecting…", "Looking for your laptop."],
+      enter: ["Enter passcode", "Type the passcode you set on your laptop."],
+      setup: ["Finish setup on your laptop", "Create a passcode on the Phone Clicker page on your laptop. This screen updates by itself."],
+    };
+    const [title, msg] = texts[state] || texts.connecting;
+    $("#lock-title").textContent = title;
+    this.message(message || msg, Boolean(message) && state === "enter");
+    $("#keypad").classList.toggle("hidden", state !== "enter" && state !== "locked");
+    $("#keypad").classList.toggle("disabled", state === "locked");
+    $("#dots").classList.toggle("hidden", state !== "enter" && state !== "locked");
+    this.setCode("");
+  },
+
+  hide() {
+    this.state = "unlocked";
+    clearInterval(this.countdown);
+    this.setCode("");
+    this.el.classList.add("unlocked");
+  },
+
+  message(text, isError = false) {
+    $("#lock-msg").textContent = text;
+    $("#lock-msg").classList.toggle("error", isError);
+  },
+
+  setCode(code) {
+    this.code = code;
+    const slots = Math.max(4, code.length);
+    $("#dots").innerHTML = Array.from({ length: slots }, (_, i) => `<span class="${i < code.length ? "filled" : ""}"></span>`).join("");
+    $("#key-ok").disabled = code.length < 4;
+  },
+
+  press(digit) {
+    if (this.state === "enter" && this.code.length < 8) {
+      this.setCode(this.code + digit);
+      buzz(8);
+    }
+  },
+
+  submit() {
+    if (this.state !== "enter" || this.code.length < 4 || !challenge) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const code = this.code;
+    this.state = "checking";
+    this.setCode("");
+    $("#keypad").classList.add("disabled");
+    this.message("Checking…");
+    // Let the screen update before the (deliberately slow) key derivation runs.
+    setTimeout(() => {
+      try {
+        // The passcode never leaves the phone: only an SRP proof is sent.
+        const { A, M1, deviceKey } = PhoneClickerCrypto.srpLogin(code, challenge);
+        pendingDeviceKey = deviceKey;
+        ws.send(JSON.stringify({ type: "auth", A, M1 }));
+      } catch {
+        this.show("enter", "Something went wrong. Please try again.");
+      }
+    }, 30);
+  },
+
+  wrong(remaining) {
+    this.show("enter", `Wrong passcode. ${remaining} ${remaining === 1 ? "try" : "tries"} left before a short lockout.`);
+    const dots = $("#dots");
+    dots.classList.remove("shake");
+    void dots.offsetWidth; // restart the animation
+    dots.classList.add("shake");
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+  },
+
+  lockout(seconds) {
+    this.show("locked");
+    $("#lock-title").textContent = "Too many wrong tries";
+    const until = Date.now() + seconds * 1000;
+    const tick = () => {
+      const left = Math.ceil((until - Date.now()) / 1000);
+      if (left <= 0) return this.show("enter");
+      this.message(`For your security, try again in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}.`, true);
+    };
+    tick();
+    this.countdown = setInterval(tick, 500);
+  },
+};
+
+$$("#keypad [data-digit]").forEach((b) => b.addEventListener("click", () => lock.press(b.dataset.digit)));
+$("#key-del").addEventListener("click", () => lock.setCode(lock.code.slice(0, -1)));
+$("#key-ok").addEventListener("click", () => lock.submit());
+// A hardware keyboard works too (handy when testing on a computer).
+document.addEventListener("keydown", (e) => {
+  if (lock.state !== "enter") return;
+  if (/^\d$/.test(e.key)) lock.press(e.key);
+  else if (e.key === "Backspace") lock.setCode(lock.code.slice(0, -1));
+  else if (e.key === "Enter") lock.submit();
+});
 
 function buzz(ms = 15) {
   if (settings.haptics && navigator.vibrate) navigator.vibrate(ms);
